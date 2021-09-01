@@ -1,3 +1,5 @@
+import re
+
 class Encoder:
     def __init__(self):
         self.base = 52
@@ -26,23 +28,50 @@ class Encoder:
     def encode(self, posting):
         encoded = self.mapper(posting[0])
         for i in range(1,7):
-            encoded += str(i) + self.mapper(posting[i])
+            if posting[i]:
+                encoded += str(i) + self.mapper(posting[i])
         return encoded
 
 
 
 class Decoder:
     def __init__(self):
-        self.base = 26
-        self.mapping = []
-        self.create_mapping()
+        self.base = 52
+        self.remainders = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+                           's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                           'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+        self.rev_map = {}
+        self.create_rev_map()
+        self.num_regex = re.compile("[0-9]")
 
-    def create_mapping(self):
-        pass
+    def create_rev_map(self):
+        for i in  range(self.base):
+            self.rev_map[self.remainders[i]] = i
 
-    def decode(self, posting):
-        pass
+    def mapper(self, string):
+        multiplier = 1
+        num = 0
+        for char in string:
+            num += self.rev_map[char] * multiplier
+            multiplier *= self.base
+        return num
+
+    def decode(self, posting_string):
+        nums = [self.mapper(num) for num in self.num_regex.split(posting_string)]
+        posting = [nums[0], 0,0,0,0,0,0]
+        j = 1
+        for char in posting_string:
+            if char in ['1', '2', '3', '4', '5', '6']:
+                posting[int(char)] = nums[j]
+                j += 1
+        return posting
+
 
 if __name__ == '__main__':
     encoder = Encoder()
-    print(encoder.encode([12,3,4,5,0,9,4]))
+    init = [12,3,0,0,0,9,1]
+    print(init)
+    encoded = encoder.encode(init)
+    decoder = Decoder()
+    decoded = decoder.decode(encoded)
+    print(encoded, decoded)
