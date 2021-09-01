@@ -5,6 +5,7 @@ from collections import defaultdict
 import heapq
 from preprocessor import TextProcessor
 import json
+from encoder import Encoder
 
 
 class Index(xml.sax.handler.ContentHandler):
@@ -26,7 +27,7 @@ class Index(xml.sax.handler.ContentHandler):
         # current block specific data
         self.map = defaultdict(lambda: [])
         self.local_postings = 0
-        self.MAX_LOCAL_POSTINGS = 10000
+        self.MAX_LOCAL_POSTINGS = 10000000
 
         # Setting up the text preprocessor
         self.text_preprocessor = TextProcessor()
@@ -36,6 +37,9 @@ class Index(xml.sax.handler.ContentHandler):
         self.parser.setFeature(xml.sax.handler.feature_namespaces, 0)
         self.parser.setContentHandler(self)
 
+        # posting encoder
+        self.encoder = Encoder()
+
     def startElement(self, name, attrs):
         self.cur_tag = name
 
@@ -44,6 +48,8 @@ class Index(xml.sax.handler.ContentHandler):
             self.index_content()
             self.cur_doc += 1
             print(self.cur_doc)
+            # if self.cur_doc == 28307:
+            #     print(self.title)
             self.reset_xmlread()
 
     def characters(self, content):
@@ -74,9 +80,9 @@ class Index(xml.sax.handler.ContentHandler):
     def finish_indexing(self):
         if self.local_postings > 0:
             self.write_to_file()
-        # file = open(self.index_path + "vocabulary.json", 'w+')
-        # json.dump(self.map, file)
-        # file.close()
+        file = open(self.index_path + "vocabulary.json", 'w+')
+        json.dump(self.map, file)
+        file.close()
 
     def write_to_file(self):
         print("creating index" + str(self.index_num) + "...")
@@ -85,19 +91,19 @@ class Index(xml.sax.handler.ContentHandler):
         for tokenid in sorted(self.map.keys()):
             posting_list = str(tokenid)
             for posting in self.map[tokenid]:
-                posting_list += " " + str(posting[0])
-                if posting[1] != 0:
-                    posting_list += "t" + str(posting[1])
-                if posting[2] != 0:
-                    posting_list += "i" + str(posting[2])
-                if posting[3] != 0:
-                    posting_list += "b" + str(posting[3])
-                if posting[4] != 0:
-                    posting_list += "c" + str(posting[4])
-                if posting[5] != 0:
-                    posting_list += "l" + str(posting[5])
-                if posting[6] != 0:
-                    posting_list += "r" + str(posting[6])
+                posting_list += " " + self.encoder.encode(posting)
+                # if posting[1] != 0:
+                #     posting_list += "t" + str(posting[1])
+                # if posting[2] != 0:
+                #     posting_list += "i" + str(posting[2])
+                # if posting[3] != 0:
+                #     posting_list += "b" + str(posting[3])
+                # if posting[4] != 0:
+                #     posting_list += "c" + str(posting[4])
+                # if posting[5] != 0:
+                #     posting_list += "l" + str(posting[5])
+                # if posting[6] != 0:
+                #     posting_list += "r" + str(posting[6])
             posting_list += '\n'
 
             file.write(posting_list)
@@ -141,7 +147,7 @@ class Index(xml.sax.handler.ContentHandler):
 
 
 if __name__ == '__main__':
-    index = Index("data_new", "./index/")
+    index = Index("data", "./index/")
     index.start_parsing()
     index.finish_indexing()
     # index.merge()
