@@ -2,11 +2,15 @@ from encoder import Decoder
 from queryprocessor import QueryProcessor
 from collections import defaultdict
 import json
+import sys
+import os
+
 
 class Search:
     def __init__(self, path):
-
-        self.index_path = path
+        if path[-1] != "/":
+            path += "/"
+        self.index_path = path + "index"
 
         self.query_processor = QueryProcessor()
 
@@ -36,13 +40,22 @@ class Search:
 
         file = open(self.index_path, "r")
 
-        while(ind < length):
+        while (ind < length):
             line = file.readline().strip("\n")
+            if line is None:
+                break
+
             if qtokens[ind][0] == line[:cur_len]:
                 postings_list.append(line)
                 ind += 1
                 if ind < length:
                     cur_len = len(qtokens[ind][0])
+            elif qtokens[ind][0] < line[:cur_len]:
+                postings_list.append("")
+                ind += 1
+                if ind < length:
+                    cur_len = len(qtokens[ind][0])
+
         file.close()
         return postings_list
 
@@ -53,7 +66,7 @@ class Search:
             self.add(query, posting)
         print(json.dumps(self.answer, indent=4))
 
-    def add(self,query, posting):
+    def add(self, query, posting):
         if self.answer[query] == {}:
             self.answer[query] = {
                 "title": [],
@@ -63,6 +76,8 @@ class Search:
                 "references": [],
                 "links": []
             }
+        if posting is None:
+            return
         for ele in posting.split(" ")[1:]:
             doc = self.decoder.decode(ele)
             if doc[1]:
@@ -78,10 +93,11 @@ class Search:
             if doc[6]:
                 self.answer[query]["references"].append(doc[0])
 
+
 if __name__ == '__main__':
-    search = Search("index/index0")
-    search.search("lake")
-
-
-
-
+    # Search("index/").search(input())
+    if not os.path.exists(sys.argv[1]):
+        print("Invalid path to inverted index")
+    else:
+        search = Search(sys.argv[1])
+        search.search(sys.argv[2])

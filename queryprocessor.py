@@ -1,5 +1,5 @@
 import re
-from nltk.stem import SnowballStemmer
+import Stemmer
 from nltk.corpus import stopwords
 
 class QueryProcessor:
@@ -11,7 +11,7 @@ class QueryProcessor:
         self.stopwords = set(stopwords.words('english'))
 
         # stemmer
-        self.stemmer = SnowballStemmer('english')
+        self.stemmer = Stemmer.Stemmer('english')
 
     def process(self, string):
         string = string.lower()
@@ -21,5 +21,5 @@ class QueryProcessor:
             return []
         tokens = self.token_regex.findall(string)
         tokens = [token for token in tokens if token not in self.stopwords]
-        tokens = [self.stemmer.stem(token) + " " for token in tokens]
+        tokens = self.stemmer.stemWords(tokens)
         return tokens
