@@ -12,6 +12,7 @@ class Index(xml.sax.handler.ContentHandler):
     def __init__(self, xml_path, index_path):
 
         # dump specific data
+        super().__init__()
         self.docs = 0
         self.xml_path = xml_path
         self.index_path = index_path
@@ -45,9 +46,10 @@ class Index(xml.sax.handler.ContentHandler):
 
     def endElement(self, name):
         if name == 'page':
-            self.index_content()
+            # if self.cur_doc != 28307:
+            #     self.index_content()
             self.cur_doc += 1
-            print(self.cur_doc)
+            # print(self.cur_doc)
             # if self.cur_doc == 28307:
             #     print(self.title)
             self.reset_xmlread()
@@ -80,9 +82,9 @@ class Index(xml.sax.handler.ContentHandler):
     def finish_indexing(self):
         if self.local_postings > 0:
             self.write_to_file()
-        file = open(self.index_path + "vocabulary.json", 'w+')
-        json.dump(self.map, file)
-        file.close()
+        # file = open(self.index_path + "vocabulary.json", 'w+')
+        # json.dump(self.map, file)
+        # file.close()
 
     def write_to_file(self):
         print("creating index" + str(self.index_num) + "...")

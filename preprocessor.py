@@ -1,7 +1,10 @@
 import re
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
-
+from nltk.stem import WordNetLemmatizer
+import time
+# import nltk
+# >>> nltk.download('wordnet')
 
 class TextProcessor:
     def __init__(self):
@@ -22,6 +25,7 @@ class TextProcessor:
 
         # stemmer
         self.stemmer = SnowballStemmer('english')
+        self.lem = WordNetLemmatizer()
 
         # sections processed under other already
         self.already_proc = []
@@ -30,18 +34,36 @@ class TextProcessor:
         self.already_proc = []
 
     def process(self, title, body):
+
         title = title.lower()
         title_tokens = self.title_tokens(title)
 
+
+
+
         body = body.lower()
         body_len = len(body)
+
+
         infobox_tokens = self.infobox_tokens(body, body_len)
+
+
+
+
         category_tokens = self.categories_tokens(body)
+
+
         reference_tokens = self.reference_tokens(body, body_len)
+
+
+
         external_links_tokens = self.external_links_tokens(body, body_len)
+
+
 
         self.already_proc.sort()
         body_tokens = self.body_tokens(body, body_len)
+
 
         self.reset()
 
@@ -49,7 +71,11 @@ class TextProcessor:
 
     def stopwords_stemmer(self, tokens):
         tokens = [token for token in tokens if token not in self.stopwords]
-        tokens = [self.stemmer.stem(token) for token in tokens]
+        # print("start",time.time())
+        # tokens2 = [self.stemmer.stem(token) for token in tokens]
+        # print("stem done",time.time())
+        # tokens3 = [self.lem.lemmatize(token) for token in tokens]
+        # print("lem done", time.time())
         return tokens
 
     def title_tokens(self, title):
@@ -66,7 +92,6 @@ class TextProcessor:
         return tokens
 
     def infobox_tokens(self, body, body_len):
-
         list = [(m.start(0), m.end(0)) for m in self.infobox_regex.finditer(body)]
         tokens = []
         for start, end in list:
@@ -143,11 +168,11 @@ class TextProcessor:
         if aplen < 1:
             tokens = self.token_regex.findall(body)
         else:
-            tokens.extend(self.title_regex.findall(body[0:self.already_proc[0][0]]))
+            tokens.extend(self.title_regex.findall(body, 0, self.already_proc[0][0]))
             for i in range(1,aplen):
                 if self.already_proc[i][0] > self.already_proc[i-1][1] and self.already_proc[i-1][1] < body_len:
-                    tokens.extend(self.title_regex.findall(body[self.already_proc[i-1][1]:self.already_proc[i][0]]))
-            tokens.extend(self.title_regex.findall(body[self.already_proc[-1][1]:]))
+                    tokens.extend(self.title_regex.findall(body, self.already_proc[i-1][1],self.already_proc[i][0]))
+            tokens.extend(self.title_regex.findall(body, self.already_proc[-1][1], body_len))
 
         tokens = self.stopwords_stemmer(tokens)
         return tokens
