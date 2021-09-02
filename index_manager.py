@@ -6,6 +6,7 @@ import heapq
 from preprocessor import TextProcessor
 import json
 from encoder import Encoder
+from html import unescape
 
 
 class Index(xml.sax.handler.ContentHandler):
@@ -34,9 +35,10 @@ class Index(xml.sax.handler.ContentHandler):
         self.text_preprocessor = TextProcessor()
 
         # setting up parsing
-        self.parser = xml.sax.make_parser()
-        self.parser.setFeature(xml.sax.handler.feature_namespaces, 0)
-        self.parser.setContentHandler(self)
+        # self.parser = xml.sax.make_parser()
+        # self.parser.setFeature(xml.sax.handler.feature_namespaces, 0)
+        # self.parser.setContentHandler(self)
+        self.data_file = open(self.xml_path, 'r')
 
         # posting encoder
         self.encoder = Encoder()
@@ -61,7 +63,61 @@ class Index(xml.sax.handler.ContentHandler):
             self.body += content
 
     def start_parsing(self):
-        self.parser.parse(self.xml_path)
+        # self.parser.parse(self.xml_path)
+        self.parse()
+
+    def parse(self):
+        while True:
+            line = self.data_file.readline()
+            if line.find("<page>") != -1:
+                title = True
+                body = True
+                while True:
+                    line = self.data_file.readline()
+                    if title:
+                        pos = line.find("<title>")
+                        if pos != -1:
+                            self.title = line[pos + 7: line.find("</title>")]
+                            title = False
+                    if body:
+                        pos = line.find("<text")
+                        if pos != -1:
+                            while line[pos] != ">":
+                                pos += 1
+                            if line[pos-1] == "/":
+                                self.process_data()
+                                break
+                            pos += 1
+                            end = line.find('</text>')
+                            if end != -1:
+                                self.body += line[pos:end]
+                                self.process_data()
+                                break
+                            else:
+                                self.body += line[pos:]
+
+                            while True:
+                                line = self.data_file.readline()
+                                end = line.find("</text>")
+                                if end != -1:
+                                    self.body += line[:end]
+                                    self.process_data()
+                                    break
+                                else:
+                                    self.body += line
+                            break
+            if not line:
+                break
+
+    def process_data(self):
+        self.title = unescape(self.title)
+        self.body = unescape(self.body)
+        self.index_content()
+        print(self.cur_doc)
+        self.cur_doc += 1
+        self.title = ""
+        self.body = ""
+
 
     def index_content(self):
 
@@ -82,6 +138,7 @@ class Index(xml.sax.handler.ContentHandler):
     def finish_indexing(self):
         if self.local_postings > 0:
             self.write_to_file()
+        self.data_file.close()
         # file = open(self.index_path + "vocabulary.json", 'w+')
         # json.dump(self.map, file)
         # file.close()

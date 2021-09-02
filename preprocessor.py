@@ -5,6 +5,7 @@ from nltk.stem import WordNetLemmatizer
 import time
 # import nltk
 # >>> nltk.download('wordnet')
+# >>> nltk.download('stopwords')
 
 class TextProcessor:
     def __init__(self):
