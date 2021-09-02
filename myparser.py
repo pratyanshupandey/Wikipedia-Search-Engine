@@ -1,3 +1,4 @@
+from html import unescape
 
 class Parser:
     def __init__(self, path):
@@ -5,11 +6,13 @@ class Parser:
         self.doc_id = 0
         self.title = ""
         self.body = ""
+        self.title_write = open("index/titlemy", "w+")
+        self.body_write = open("index/bodymy", "w+")
 
     def parse(self):
         while True:
             line = self.file.readline()
-            if 0 < len(line) < 15 and line.find("<page>") != -1:
+            if line.find("<page>") != -1:
                 title = True
                 body = True
                 while True:
@@ -22,20 +25,50 @@ class Parser:
                     if body:
                         pos = line.find("<text")
                         if pos != -1:
-                            end = line.find("</text>")
-                            if end != -1:
-                                self.body += line[pos:end]
-                                self.doc_id += 1
+                            depth = 1
+                            while line[pos] != ">":
+                                pos += 1
+                            if line[pos-1] == "/":
+                                self.title = unescape(self.title)
+                                self.body = unescape(self.body)
+                                self.title_write.write(str(self.doc_id) + " " + self.title + "\n")
+                                self.body_write.write(str(self.doc_id) + " " + self.body + "\n")
                                 print(self.doc_id)
+
+                                self.doc_id += 1
                                 self.title = ""
                                 self.body = ""
+                                break
+                            pos += 1
+                            end = line.find('</text>')
+                            if end != -1:
+                                self.body += line[pos:end]
+                                self.title = unescape(self.title)
+                                self.body = unescape(self.body)
+                                self.title_write.write(str(self.doc_id) + " " + self.title + "\n")
+                                self.body_write.write(str(self.doc_id) + " " + self.body + "\n")
+                                print(self.doc_id)
+
+                                self.doc_id += 1
+                                self.title = ""
+                                self.body = ""
+                                break
+                            else:
+                                self.body += line[pos:]
+
                             while True:
                                 line = self.file.readline()
                                 end = line.find("</text>")
                                 if end != -1:
-                                    self.body += line[pos:end]
-                                    self.doc_id += 1
+                                    self.body += line[:end]
+
+                                    self.title = unescape(self.title)
+                                    self.body = unescape(self.body)
+                                    self.title_write.write(str(self.doc_id) + " " + self.title + "\n")
+                                    self.body_write.write(str(self.doc_id) + " " + self.body + "\n")
                                     print(self.doc_id)
+
+                                    self.doc_id += 1
                                     self.title = ""
                                     self.body = ""
                                     break
@@ -45,4 +78,8 @@ class Parser:
             if not line:
                 break
 
-Parser("data").parse()
+ps = Parser("data")
+ps.parse()
+ps.title_write.close()
+ps.body_write.close()
+

@@ -19,6 +19,9 @@ class Index(xml.sax.handler.ContentHandler):
         self.parser.setFeature(xml.sax.handler.feature_namespaces, 0)
         self.parser.setContentHandler(self)
 
+        self.title_write = open("index/titlexml", "w+")
+        self.body_write = open("index/bodyxml", "w+")
+
 
     def startElement(self, name, attrs):
         self.cur_tag = name
@@ -27,8 +30,11 @@ class Index(xml.sax.handler.ContentHandler):
         if name == 'page':
             # if self.cur_doc != 28307:
             #     self.index_content()
+            self.title_write.write(str(self.cur_doc) + " " + self.title.rstrip(" \n") + "\n")
+            self.body_write.write(str(self.cur_doc) + " " + self.body.rstrip(" \n") + "\n")
+            print(self.cur_doc)
+
             self.cur_doc += 1
-            # print(self.cur_doc)
             # if self.cur_doc == 28307:
             #     print(self.title)
             # self.reset_xmlread()
@@ -51,3 +57,5 @@ class Index(xml.sax.handler.ContentHandler):
 
 ind = Index("data")
 ind.start_parsing()
+ind.title_write.close()
+ind.body_write.close()
