@@ -40,7 +40,7 @@ class TextProcessor:
         return title_tokens, body_tokens, reference_tokens, category_tokens, infobox_tokens, external_links_tokens
 
     def stopwords_stemmer(self, tokens):
-        tokens = [token for token in tokens if token not in self.stopwords]
+        tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]
         tokens = self.stemmer.stemWords(tokens)
         return tokens
 
