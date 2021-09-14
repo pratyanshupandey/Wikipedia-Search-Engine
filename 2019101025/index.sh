@@ -1,1 +1,0 @@
-python3 index_manager.py $1 $2 $3
