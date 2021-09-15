@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 import heapq
 from preprocessor import TextProcessor
@@ -7,7 +8,7 @@ import sys
 import os
 
 class Index:
-    def __init__(self, xml_path, index_path, stats_path, title_path, len_path, info_path):
+    def __init__(self, xml_path, index_path, stats_path, title_path, len_path, info_path, range_path):
 
         # dump specific data
         super().__init__()
@@ -19,6 +20,7 @@ class Index:
         self.title_file = open(title_path, "w+")
         self.size_file = open(len_path, "w+")
         self.info_path = info_path
+        self.range_path = range_path
 
         self.index_num = 0
         self.temp_num = 0
@@ -174,6 +176,7 @@ class Index:
         token_count = 0
         postings_len = 0
 
+
         temp_files = [open(self.index_path + "temp" + str(val), 'r') for val in range(self.temp_num)]
         index_file = open(self.index_path + "index" + str(self.index_num), "w+")
 
@@ -188,6 +191,7 @@ class Index:
 
         popped = []
         cur_token = token_min_heap[0][0]
+        term_range = [[cur_token, ""]]
         cur_file = 0
         cur_posting = ""
 
@@ -197,9 +201,12 @@ class Index:
                 postings_len += len(cur_token) + len(cur_posting) + 2
                 token_count += 1
                 cur_posting = ""
+                if term_range[-1][1] != "":
+                    term_range.append([cur_token,""])
                 if postings_len >= self.MAX_INDEX_POSTINGS:
                     postings_len = 0
                     index_file.close()
+                    term_range[-1][1] = cur_token
                     self.index_num += 1
                     index_file = open(self.index_path + "index" + str(self.index_num), "w+")
 
@@ -230,7 +237,11 @@ class Index:
         info_file.write(str(self.index_num) + "\n")
         info_file.close()
 
+        range_file = open(self.range_path , "w+")
+        json.dump({"ranges": term_range, "length_sums": self.length_sum}, range_file)
+        range_file.close()
+
 if __name__ == '__main__':
-    index = Index("enwiki-20210720-pages-articles-multistream.xml", "index", "invertedindex_stat.txt", "index/titles", "index/lengths", "index/info")
+    index = Index("enwiki-20210720-pages-articles-multistream.xml", "index", "invertedindex_stat.txt", "index/titles", "index/lengths", "index/info", "index/range")
     index.start_parsing()
     index.finish_indexing()
