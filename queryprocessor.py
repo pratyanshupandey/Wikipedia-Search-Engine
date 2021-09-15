@@ -18,6 +18,6 @@ class QueryProcessor:
         if string is None:
             return []
         tokens = self.token_regex.findall(string)
-        tokens = [token for token in tokens if token not in self.stopwords]
+        tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]
         tokens = self.stemmer.stemWords(tokens)
         return tokens
