@@ -178,15 +178,16 @@ if __name__ == '__main__':
 
     search_engine = Search(config_path)
 
-    while True:
-        query = input("Q: ")
-        search_engine.search(query)
-
-    # queries = open(query_path, "r")
-    # query_list = queries.readlines()
-    # for query in query_list:
-    #     query = query.rstrip("\n")
-    #     print("Query: ")
-    #     print("Results: ")
+    # while True:
+    #     query = input("Q: ")
     #     search_engine.search(query)
-    #     print("\n\n\n")
+
+    queries = open(query_path, "r")
+    query_list = queries.readlines()
+    for query in query_list:
+        query = query.rstrip("\n")
+        print("Query: ", query)
+        print()
+        print("Results: ")
+        search_engine.search(query)
+        print("\n\n\n")

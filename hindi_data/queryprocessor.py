@@ -6,13 +6,16 @@ from collections import defaultdict
 class QueryProcessor:
     def __init__(self):
         # regex specific data
-        self.token_regex = re.compile(r"[a-zA-Z0-9]+")
+        self.token_regex = re.compile(r"\w+")
 
         # stopwords
-        self.stopwords = set(stopwords.words('english'))
+        self.stopwords = stopwords.words('english')
+        self.load_hindi_stopwords()
+        self.stopwords = set(self.stopwords)
 
         # stemmer
-        self.stemmer = Stemmer.Stemmer('english')
+        self.stemmer_en = Stemmer.Stemmer('english')
+        self.stemmer_hi = Stemmer.Stemmer('hindi')
 
     def process(self, string):
         string = string.lower()
@@ -35,13 +38,24 @@ class QueryProcessor:
         for i in range(len(token_field)):
             for token in token_field[i]:
                 if token not in self.stopwords and len(token) > 1 and (token.isnumeric() == False or len(token) == 4):
-                    token = self.stemmer.stemWord(token)
+                    if 'a' <= token[0] <= 'z' or '0' <= token[0] <= '9':
+                        token = self.stemmer_en.stemWord(token)
+                    else:
+                        token = self.stemmer_hi.stemWord(token)
                     if tokens_map[token] == []:
                         tokens_map[token] = [0,0,0,0,0,0,0]
                     tokens_map[token][i] = 1
 
         return list(tokens_map.items())
 
+    def load_hindi_stopwords(self):
+        file = open("hindi_stopwords.txt", "r")
+        while True:
+            line = file.readline()
+            if line == "":
+                break
+            self.stopwords.extend(line.rstrip("\n").split(" "))
+        file.close()
 
 if __name__ == "__main__":
     q = QueryProcessor()

@@ -5,20 +5,24 @@ import Stemmer
 class TextProcessor:
     def __init__(self):
         # regex specific data
-        self.title_regex = re.compile(r"[a-zA-Z0-9]+")
-        self.token_regex = re.compile(r"[a-zA-Z0-9]+")
+        self.title_regex = re.compile(r"\w+")
+        self.token_regex = re.compile(r"\w+")
         self.infobox_regex = re.compile(r"{{infobox")
         self.links_regex = re.compile(r"(http|https)://\S+")
-        self.categories_regex = re.compile(r"\[\[category:(.*)\]\]")
-        self.external_regex = re.compile(r"=+external links=+")
-        self.reference_regex = re.compile(r"=+references=+|=+notes=+|=+footnotes=+")
+        self.categories_regex_en = re.compile(r"\[\[category:(.*)\]\]")
+        self.categories_regex_hi = re.compile(r"\[\[श्रेणी:(.*)\]\]")
+        self.external_regex = re.compile(r"=+external links=+| बाहरी कड़ियाँ ")
+        self.reference_regex = re.compile(r"=+references=+|=+notes=+|=+footnotes=+|=+\s?सन्दर्भ\s?=+|=+\s?इन्हें भी देखें\s?=+")
         self.citation_regex = re.compile(r"\{\{cite(.*)\}\}")
 
         # stopwords
-        self.stopwords = set(stopwords.words('english'))
+        self.stopwords = stopwords.words('english')
+        self.load_hindi_stopwords()
+        self.stopwords = set(self.stopwords)
 
         # stemmer
-        self.stemmer = Stemmer.Stemmer('english')
+        self.stemmer_en = Stemmer.Stemmer('english')
+        self.stemmer_hi = Stemmer.Stemmer('hindi')
 
         # sections processed under other already
         self.already_proc = []
@@ -42,8 +46,13 @@ class TextProcessor:
     def stopwords_stemmer(self, tokens):
         tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]
         tokens = [token for token in tokens if not token.isnumeric() or len(token) == 4]
-        tokens = self.stemmer.stemWords(tokens)
-        return tokens
+        ret = []
+        for token in tokens:
+            if 'a' <= token[0] <='z' or '0' <= token[0] <='9':
+                ret.append(self.stemmer_en.stemWord(token))
+            else:
+                ret.append(self.stemmer_hi.stemWord(token))
+        return ret
 
     def title_tokens(self, title):
         tokens = self.title_regex.findall(title)
@@ -51,7 +60,8 @@ class TextProcessor:
         return tokens
 
     def categories_tokens(self, body):
-        list = self.categories_regex.findall(body)
+        list = self.categories_regex_en.findall(body)
+        list.extend(self.categories_regex_hi.findall(body))
         tokens = []
         for element in list:
             tokens.extend(self.token_regex.findall(element))
@@ -143,3 +153,12 @@ class TextProcessor:
 
         tokens = self.stopwords_stemmer(tokens)
         return tokens
+
+    def load_hindi_stopwords(self):
+        file = open("hindi_stopwords.txt", "r")
+        while True:
+            line = file.readline()
+            if line == "":
+                break
+            self.stopwords.extend(line.rstrip("\n").split(" "))
+        file.close()

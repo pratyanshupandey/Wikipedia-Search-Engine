@@ -283,6 +283,6 @@ class Index:
 
 
 if __name__ == '__main__':
-    index = Index("prev_data/data", "prev_data/index", "prev_data/info")
+    index = Index("hiwiki-20210720-pages-articles-multistream.xml", "index", "info")
     index.start_parsing()
     index.finish_indexing()
