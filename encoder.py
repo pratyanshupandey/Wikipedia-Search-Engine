@@ -54,6 +54,7 @@ class Decoder:
                 basex += self.remainders[i % 52]
                 i //= 52
             self.rev_map[basex] = temp
+        self.rev_map['a'] = 0
 
     def mapper(self, string):
         if self.rev_map[string] != -1:
@@ -78,7 +79,7 @@ class Decoder:
 
 if __name__ == '__main__':
     encoder = Encoder()
-    init = [9098267829,343,232,3434,0,432,1]
+    init = [0,0,0,0,0,0,0]
     print(init)
     encoded = encoder.encode(init)
     decoder = Decoder()
