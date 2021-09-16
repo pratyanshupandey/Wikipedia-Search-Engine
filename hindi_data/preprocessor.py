@@ -44,10 +44,14 @@ class TextProcessor:
         return title_tokens, body_tokens, reference_tokens, category_tokens, infobox_tokens, external_links_tokens
 
     def stopwords_stemmer(self, tokens):
-        tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]
-        tokens = [token for token in tokens if not token.isnumeric() or len(token) == 4]
-        ret = []
+        toks = []
         for token in tokens:
+            toks.extend(token.split("_"))
+
+        toks = [token for token in toks if token not in self.stopwords and len(token) > 1]
+        toks = [token for token in toks if not token.isnumeric() or len(token) == 4]
+        ret = []
+        for token in toks:
             if 'a' <= token[0] <='z' or '0' <= token[0] <='9':
                 ret.append(self.stemmer_en.stemWord(token))
             else:
