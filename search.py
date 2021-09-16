@@ -2,8 +2,6 @@ from encoder import Decoder
 from queryprocessor import QueryProcessor
 from collections import defaultdict
 import json
-import sys
-import os
 
 
 class Search:
@@ -14,12 +12,12 @@ class Search:
         config_file.close()
 
         self.index_path = paths["index_path"] + "index"
-
+        self.info_path = paths["info_path"]
         file = open(paths["info_path"] + "doc_info.json", "r")
         doc_info = json.load(file)
         file.close()
         self.lengths = doc_info["lengths"]
-        self.length_avg = [sum / doc_info["docs"] for sum in doc_info["length_sum"]]
+        self.length_avg = [l_sum / doc_info["docs"] for l_sum in doc_info["length_sum"]]
         self.MAX_TITLES = doc_info["max_titles"]
         self.doc_nums = doc_info["docs"]
 
@@ -28,7 +26,7 @@ class Search:
         self.ranges = index_info["term_ranges"]
         file.close()
 
-        self.weights = [5,2,1,1,1,1]
+        self.weights = [5, 2, 1, 1, 1, 1]
 
         self.query_processor = QueryProcessor()
 
@@ -36,7 +34,7 @@ class Search:
 
         self.answer = defaultdict(lambda: {})
 
-        self.b_c = 1
+        self.b_c = 0.75
         self.k_1 = 1.2
 
         self.doc_scores = defaultdict(lambda: 0)
@@ -53,15 +51,20 @@ class Search:
 
     def search(self, query_string):
         qtokens = self.get_qtokens(query_string)
-        posting_list = self.find_in_index(qtokens)          # posting list for every qtoken undecoded
+        if qtokens is None:
+            print("No results for this query")
+            return
+
+        posting_list = self.find_in_index(qtokens)  # posting list for every qtoken undecoded
         self.calc_tf_idf(posting_list)
 
-        result_docs = [doc_id for doc_id,score in sorted(self.doc_scores.items(), key=lambda x: x[1], reverse = True)[:self.MAX_RESULT]]
+        result_docs = [doc_id for doc_id, score in sorted(self.doc_scores.items(), key=lambda x: x[1], reverse=True)][
+                      :self.MAX_RESULT]
         self.print_result(result_docs)
 
     def get_title(self, doc_id):
         title_file = doc_id // self.MAX_TITLES
-        file = open(self.index_path + "titles" + str(title_file))
+        file = open(self.info_path + "titles/" + str(title_file))
         offset = doc_id % self.MAX_TITLES
         i = 0
         while True:
@@ -83,24 +86,23 @@ class Search:
     def calc_tf_idf(self, posting_list):
         # posting_list can be "" to denote no tokens found
 
-        for posting in posting_list: ## or qtok in qtokens
+        for posting in posting_list:  # or qtok in qtokens
             if posting == "":
                 continue
             docs = posting.split(" ")
-            idf_score = (self.doc_nums - len(docs) + 0.5)/(len(docs) + 0.5) + 1
+            idf_score = (self.doc_nums - len(docs) + 0.5) / (len(docs) + 0.5) + 1
 
-            for doc in docs:    # docid t i b c l r
+            for doc in docs:  # docid t i b c l r
                 post = self.decoder.decode(doc)
                 doc_id = post[0]
                 tf_score = 0
-                for i in range(1,7):
-                    tf_score += self.weights[i-1] * ( post[i] / (1 + self.b_c * (self.lengths[doc_id][i-1]/self.length_avg[i-1] - 1)))
+                for i in range(1, 7):
+                    tf_score += self.weights[i - 1] * (
+                                post[i] / (1 + self.b_c * (self.lengths[doc_id][i - 1] / self.length_avg[i - 1] - 1)))
                 if self.doc_scores[doc_id] == 0:
-                    self.doc_scores[doc_id] = (tf_score * idf_score)/ (self.k_1 + tf_score)
+                    self.doc_scores[doc_id] = (tf_score * idf_score) / (self.k_1 + tf_score)
                 else:
-                    self.doc_scores[doc_id] += (tf_score * idf_score)/ (self.k_1 + tf_score)
-
-
+                    self.doc_scores[doc_id] += (tf_score * idf_score) / (self.k_1 + tf_score)
 
     def binary_search(self, target, low, high):
         while high - low > 1:
@@ -125,7 +127,7 @@ class Search:
 
         i = 0
         while i < len(qtokens):
-            ind = self.binary_search(qtokens[i],low, high)
+            ind = self.binary_search(qtokens[i], low, high)
 
             if ind == -1:
                 posting_list.append("")
@@ -133,8 +135,8 @@ class Search:
                 continue
 
             low = ind
-            index_file = open(self.index_path + "index" + str(ind), 'r')
-            while qtokens[i] <= self.ranges[ind][1]:
+            index_file = open(self.index_path + str(ind), 'r')
+            while i < len(qtokens) and qtokens[i] <= self.ranges[ind][1]:
                 while True:
                     line = index_file.readline()
                     if qtokens[i] <= line[:len(qtokens[i])]:
@@ -155,6 +157,9 @@ class Search:
         return posting_list
 
     def print_result(self, result_docs):
+        if result_docs is None:
+            print("No search results for this query.")
+            return
         for doc_id in result_docs:
             title = self.get_title(doc_id)
             print(str(doc_id) + ", " + title)
@@ -162,14 +167,15 @@ class Search:
 
 if __name__ == '__main__':
     config_path = "config.json"
-    query_path = "query.txt"
+    query_path = "queries.txt"
 
     search_engine = Search(config_path)
-    print(search_engine.length_avg)
+
     queries = open(query_path, "r")
-    while True:
-        line = queries.readline()
-        if line is None:
-            break
-        query = line.rstrip("\n")
+    query_list = queries.readlines()
+    for query in query_list:
+        query = query.rstrip("\n")
+        print("Query: ")
+        print("Results: ")
         search_engine.search(query)
+        print("\n\n\n")
