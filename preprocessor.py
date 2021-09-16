@@ -41,6 +41,7 @@ class TextProcessor:
 
     def stopwords_stemmer(self, tokens):
         tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]
+        tokens = [token for token in tokens if not token.isnumeric() or len(token) == 4]
         tokens = self.stemmer.stemWords(tokens)
         return tokens
 

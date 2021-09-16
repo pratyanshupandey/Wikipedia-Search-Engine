@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 
 class Encoder:
     def __init__(self):
@@ -40,15 +41,23 @@ class Decoder:
         self.remainders = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
                            's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                            'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-        self.rev_map = {}
+        self.rev_map = defaultdict(lambda: -1)
         self.create_rev_map()
         self.num_regex = re.compile("[0-9]")
+        self.max_mapping = 53000
 
     def create_rev_map(self):
-        for i in  range(self.base):
-            self.rev_map[self.remainders[i]] = i
+        for i in range(1,53001):
+            basex = ""
+            temp = i
+            while i:
+                basex += self.remainders[i % 52]
+                i //= 52
+            self.rev_map[basex] = temp
 
     def mapper(self, string):
+        if self.rev_map[string] != -1:
+            return self.rev_map[string]
         multiplier = 1
         num = 0
         for char in string:
@@ -69,7 +78,7 @@ class Decoder:
 
 if __name__ == '__main__':
     encoder = Encoder()
-    init = [12,3,0,0,0,9,1]
+    init = [9098267829,343,232,3434,0,432,1]
     print(init)
     encoded = encoder.encode(init)
     decoder = Decoder()
