@@ -7,27 +7,40 @@ from html import unescape
 import sys
 import os
 
+
 class Index:
-    def __init__(self, xml_path, index_path, stats_path, title_path, len_path, info_path, range_path):
+    def __init__(self, xml_path, index_path, info_path):
 
         # dump specific data
         super().__init__()
         self.xml_path = xml_path
+
         if index_path[-1] != '/':
             index_path += '/'
+
+        if info_path[-1] != '/':
+            info_path += '/'
+
         self.index_path = index_path
-        self.stats_path = stats_path
-        self.title_file = open(title_path, "w+")
-        self.size_file = open(len_path, "w+")
+        self.stats_path = "stats.txt"
+        self.title_folder = info_path + "titles/"
+        self.doc_info_path = info_path + "doc_info.json"
+        self.index_info_path = info_path + "index_info.json"
+        self.config_path = "config.json"
         self.info_path = info_path
-        self.range_path = range_path
 
         self.index_num = 0
         self.temp_num = 0
         self.MAX_INDEX_POSTINGS = 1000000
 
+        self.title_num = 0
+        self.MAX_TITLES = 10000
+        self.title_count = 0
+        self.title_file = open(self.title_folder + str(self.title_num), 'w+')
+
         # stats forBM25
         self.length_sum = [0, 0, 0, 0, 0, 0]
+        self.lengths = []
 
         # document specific data
         self.body = ""
@@ -98,6 +111,11 @@ class Index:
     def process_data(self):
 
         self.title_file.write(str(self.cur_doc) + " " + self.title + "\n")
+        self.title_count += 1
+        if self.title_count > self.MAX_TITLES:
+            self.title_file.close()
+            self.title_num += 1
+            self.title_file = open(self.title_folder + str(self.title_num), 'w+')
 
         self.title = unescape(self.title.lower())
         self.body = unescape(self.body.lower())
@@ -114,7 +132,9 @@ class Index:
             self.title, self.body)
 
         # adding lenghts and storing lengths for each document
-        self.size_file.write(str(self.cur_doc) + " " + str([len(title_tokens), len(infobox_tokens), len(body_tokens), len(category_tokens), len(links_tokens), len(references_tokens)]) + "\n")
+        self.lengths.append(
+            [len(title_tokens), len(infobox_tokens), len(body_tokens), len(category_tokens), len(links_tokens),
+             len(references_tokens)])
 
         self.update_map_with(title_tokens, 1)
         self.update_map_with(infobox_tokens, 2)
@@ -130,10 +150,32 @@ class Index:
         if self.local_postings > 0:
             self.write_to_file()
         self.data_file.close()
-        self.size_file.close()
         self.title_file.close()
-        self.merge()
 
+        doc_info_file = open(self.doc_info_path, "w+")
+        json.dump({"lengths": self.lengths, "length_sum": self.length_sum, "docs": self.cur_doc,
+                   "max_titles": self.MAX_TITLES}, doc_info_file)
+        doc_info_file.close()
+
+        token_count = self.merge()
+
+        config_file = open(self.config_path, "w+")
+        json.dump({"index_path": self.index_path, "info_path": self.info_path}, config_file)
+        config_file.close()
+
+        stats_file = open(self.stats_path, "w+")
+
+        index_size = 0
+        for file in os.scandir(self.index_path):
+            if file.name.startswith("temp"):
+                os.remove(os.path.join(self.index_path, file.name))
+            elif file.name.startswith("index"):
+                index_size += os.path.getsize(file)
+                
+        stats_file.write(str(index_size) + "\n")
+        stats_file.write(str(self.index_num) + "\n")
+        stats_file.write(str(token_count) + "\n")
+        stats_file.close()
 
     def write_to_file(self):
         # print("creating index" + str(self.index_num) + "...")
@@ -155,7 +197,7 @@ class Index:
 
     def update_map_with(self, tokens, pos):
 
-        self.length_sum[pos-1] += len(tokens)
+        self.length_sum[pos - 1] += len(tokens)
 
         for token in tokens:
             if not self.map[token]:
@@ -175,7 +217,6 @@ class Index:
     def merge(self):
         token_count = 0
         postings_len = 0
-
 
         temp_files = [open(self.index_path + "temp" + str(val), 'r') for val in range(self.temp_num)]
         index_file = open(self.index_path + "index" + str(self.index_num), "w+")
@@ -202,7 +243,7 @@ class Index:
                 token_count += 1
                 cur_posting = ""
                 if term_range[-1][1] != "":
-                    term_range.append([cur_token,""])
+                    term_range.append([cur_token, ""])
                 if postings_len >= self.MAX_INDEX_POSTINGS:
                     postings_len = 0
                     index_file.close()
@@ -229,19 +270,18 @@ class Index:
 
         index_file.write(cur_token + " " + cur_posting + "\n")
         token_count += 1
+        term_range[-1][1] = cur_token
+        self.index_num += 1
         index_file.close()
 
-        info_file = open(self.info_path , "w+")
-        info_file.write(str(self.cur_doc) + "\n")
-        info_file.write(str(token_count) + "\n")
-        info_file.write(str(self.index_num) + "\n")
-        info_file.close()
+        index_info_file = open(self.index_info_path, "w+")
+        json.dump({"term_ranges": term_range, "index_files_count": self.index_num}, index_info_file)
+        index_info_file.close()
 
-        range_file = open(self.range_path , "w+")
-        json.dump({"ranges": term_range, "length_sums": self.length_sum}, range_file)
-        range_file.close()
+        return token_count
+
 
 if __name__ == '__main__':
-    index = Index("enwiki-20210720-pages-articles-multistream.xml", "index", "invertedindex_stat.txt", "index/titles", "index/lengths", "index/info", "index/range")
+    index = Index("enwiki-20210720-pages-articles-multistream.xml", "index", "info")
     index.start_parsing()
     index.finish_indexing()
