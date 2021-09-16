@@ -3,7 +3,8 @@ from queryprocessor import QueryProcessor
 from collections import defaultdict
 import json
 import math
-
+import sys
+import time
 
 class Search:
     def __init__(self, config_path):
@@ -53,7 +54,7 @@ class Search:
     def search(self, query_string):
         qtokens, qtok_types = self.get_qtokens(query_string)
         if qtokens  == []:
-            print("No results for this query")
+            query_out.write("No results for this query\n")
             return
 
         posting_list = self.find_in_index(qtokens)  # posting list for every qtoken undecoded
@@ -165,28 +166,31 @@ class Search:
 
     def print_result(self, result_docs):
         if result_docs == []:
-            print("No search results for this query.")
+            query_out.write("No search results for this query.\n")
             return
         for doc_id in result_docs:
             title = self.get_title(doc_id)
-            print(str(doc_id) + ", " + title)
+            query_out.write(str(doc_id) + ", " + title + "\n")
 
 
 if __name__ == '__main__':
     config_path = "config.json"
-    query_path = "queries.txt"
+    query_path = sys.argv[1]
 
     search_engine = Search(config_path)
 
-    while True:
-        query = input("Q: ")
-        search_engine.search(query)
-
-    # queries = open(query_path, "r")
-    # query_list = queries.readlines()
-    # for query in query_list:
-    #     query = query.rstrip("\n")
-    #     print("Query: ")
-    #     print("Results: ")
+    # while True:
+    #     query = input("Q: ")
     #     search_engine.search(query)
-    #     print("\n\n\n")
+
+    queries = open(query_path, "r")
+    query_list = queries.readlines()
+    query_out = open("queries_op.txt", "w+")
+    for query in query_list:
+        query = query.rstrip("\n")
+        start = time.time()
+        search_engine.search(query)
+        duration = time.time() - start
+        query_out.write(str(duration) + "\n\n")
+    query_out.close()
+    queries.close()
