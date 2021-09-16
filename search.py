@@ -2,6 +2,7 @@ from encoder import Decoder
 from queryprocessor import QueryProcessor
 from collections import defaultdict
 import json
+import math
 
 
 class Search:
@@ -27,6 +28,7 @@ class Search:
         file.close()
 
         self.weights = [5, 2, 1, 1, 1, 1]
+        self.boost = 10
 
         self.query_processor = QueryProcessor()
 
@@ -37,7 +39,7 @@ class Search:
         self.b_c = 0.75
         self.k_1 = 1.2
 
-        self.doc_scores = defaultdict(lambda: 0)
+        self.doc_scores = defaultdict(lambda: 0.0)
         self.MAX_RESULT = 10
 
     def reset(self):
@@ -45,18 +47,17 @@ class Search:
 
     def get_qtokens(self, query_string):
         qtokens = self.query_processor.process(query_string)
-        qtokens = list(set(qtokens))
         qtokens.sort()
-        return qtokens
+        return [qtok[0] for qtok in qtokens], [qtok[1] for qtok in qtokens]
 
     def search(self, query_string):
-        qtokens = self.get_qtokens(query_string)
+        qtokens, qtok_types = self.get_qtokens(query_string)
         if qtokens  == []:
             print("No results for this query")
             return
 
         posting_list = self.find_in_index(qtokens)  # posting list for every qtoken undecoded
-        self.calc_tf_idf(posting_list)
+        self.calc_tf_idf(posting_list, qtok_types)
 
         result_docs = [doc_id for doc_id, score in sorted(self.doc_scores.items(), key=lambda x: x[1], reverse=True)][
                       :self.MAX_RESULT]
@@ -84,23 +85,28 @@ class Search:
         file.close()
         return ""
 
-    def calc_tf_idf(self, posting_list):
+    def calc_tf_idf(self, posting_list, qtok_types):
         # posting_list can be "" to denote no tokens found
 
-        for posting in posting_list:  # or qtok in qtokens
+        for posting,qtok_type in zip(posting_list, qtok_types):  # or qtok in qtokens
             if posting == "":
                 continue
             docs = posting.split(" ")
-            idf_score = (self.doc_nums - len(docs) + 0.5) / (len(docs) + 0.5) + 1
+            idf_score = math.log(((self.doc_nums - len(docs) + 0.5) / (len(docs) + 0.5)) + 1)
 
             for doc in docs:  # docid t i b c l r
                 post = self.decoder.decode(doc)
                 doc_id = post[0]
                 tf_score = 0
                 for i in range(1, 7):
-                    tf_score += self.weights[i - 1] * (
+                    if qtok_type[i]:
+                        tf_score += self.boost * self.weights[i - 1] * (
                                 post[i] / (1 + self.b_c * (self.lengths[doc_id][i - 1] / self.length_avg[i - 1] - 1)))
-                if self.doc_scores[doc_id] == 0:
+                    else:
+                        tf_score += self.weights[i - 1] * (
+                                post[i] / (1 + self.b_c * (self.lengths[doc_id][i - 1] / self.length_avg[i - 1] - 1)))
+
+                if self.doc_scores[doc_id] == 0.0:
                     self.doc_scores[doc_id] = (tf_score * idf_score) / (self.k_1 + tf_score)
                 else:
                     self.doc_scores[doc_id] += (tf_score * idf_score) / (self.k_1 + tf_score)
