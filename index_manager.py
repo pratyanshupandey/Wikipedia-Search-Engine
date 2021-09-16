@@ -112,9 +112,10 @@ class Index:
 
         self.title_file.write(str(self.cur_doc) + " " + self.title + "\n")
         self.title_count += 1
-        if self.title_count > self.MAX_TITLES:
+        if self.title_count >= self.MAX_TITLES:
             self.title_file.close()
             self.title_num += 1
+            self.title_count = 0
             self.title_file = open(self.title_folder + str(self.title_num), 'w+')
 
         self.title = unescape(self.title.lower())
@@ -282,6 +283,6 @@ class Index:
 
 
 if __name__ == '__main__':
-    index = Index("enwiki-20210720-pages-articles-multistream.xml", "index", "info")
+    index = Index("prev_data/data", "prev_data/index", "prev_data/info")
     index.start_parsing()
     index.finish_indexing()

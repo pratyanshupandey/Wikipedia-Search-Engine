@@ -7,17 +7,26 @@ import os
 
 
 class Search:
-    def __init__(self, index_path, range_path, doc_nums, length_path):
-        if index_path[-1] != "/":
-            index_path += "/"
-        self.index_path = index_path + "index"
-        range_file = open(range_path, "r")
-        dict = json.load(range_file)
-        self.ranges = dict["ranges"]
-        self.doc_nums = doc_nums
-        self.length_avg = [length / doc_nums for length in dict["length_sums"]]
-        self.lengths = []
-        self.load_length(length_path)
+    def __init__(self, config_path):
+
+        config_file = open(config_path, "r")
+        paths = json.load(config_file)
+        config_file.close()
+
+        self.index_path = paths["index_path"] + "index"
+
+        file = open(paths["info_path"] + "doc_info.json", "r")
+        doc_info = json.load(file)
+        file.close()
+        self.lengths = doc_info["lengths"]
+        self.length_avg = [sum / doc_info["docs"] for sum in doc_info["length_sum"]]
+        self.MAX_TITLES = doc_info["max_titles"]
+        self.doc_nums = doc_info["docs"]
+
+        file = open(paths["info_path"] + "index_info.json", "r")
+        index_info = json.load(file)
+        self.ranges = index_info["term_ranges"]
+        file.close()
 
         self.weights = [5,2,1,1,1,1]
 
@@ -29,8 +38,6 @@ class Search:
 
         self.b_c = 1
         self.k_1 = 1.2
-
-        self.TITLES = 10000
 
         self.doc_scores = defaultdict(lambda: 0)
         self.MAX_RESULT = 10
@@ -53,15 +60,24 @@ class Search:
         self.print_result(result_docs)
 
     def get_title(self, doc_id):
-        title_file = doc_id // self.TITLES
+        title_file = doc_id // self.MAX_TITLES
         file = open(self.index_path + "titles" + str(title_file))
+        offset = doc_id % self.MAX_TITLES
+        i = 0
         while True:
             line = file.readline()
             if line is None:
                 break
-            if str(doc_id) == line[:len(str(doc_id))]:
-                file.close()
-                return line.rstrip("\n").split(" ", 1)[1]
+            if i == offset:
+                if str(doc_id) == line[:len(str(doc_id))]:
+                    file.close()
+                    return line.rstrip("\n").split(" ", 1)[1]
+                else:
+                    print("Error in getting title")
+                    return ""
+            i += 1
+
+        file.close()
         return ""
 
     def calc_tf_idf(self, posting_list):
@@ -144,20 +160,16 @@ class Search:
             print(str(doc_id) + ", " + title)
 
 
-    def load_length(self, length_path):
-        length_file = open(length_path, 'r')
-        while True:
-            line = length_file.readline()
-            if line is None:
-                break
-            self.lengths.append(json.loads(line.split(" ", 1)[1]))
-
-
 if __name__ == '__main__':
-    search = Search("prev_data", 44, 52612, "prev_data/lengths")
-    search.search(input())
+    config_path = "config.json"
+    query_path = "query.txt"
+
+    search_engine = Search(config_path)
+    print(search_engine.length_avg)
+    queries = open(query_path, "r")
     while True:
-        more = input("More searching:")
-        if more == 'n':
+        line = queries.readline()
+        if line is None:
             break
-        search.search(input())
+        query = line.rstrip("\n")
+        search_engine.search(query)
