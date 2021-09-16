@@ -15,7 +15,7 @@ class QueryProcessor:
 
     def process(self, string):
         string = string.lower()
-        if string is None:
+        if string == "":
             return []
         tokens = self.token_regex.findall(string)
         tokens = [token for token in tokens if token not in self.stopwords and len(token) > 1]

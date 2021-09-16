@@ -51,7 +51,7 @@ class Search:
 
     def search(self, query_string):
         qtokens = self.get_qtokens(query_string)
-        if qtokens is None:
+        if qtokens  == []:
             print("No results for this query")
             return
 
@@ -61,6 +61,7 @@ class Search:
         result_docs = [doc_id for doc_id, score in sorted(self.doc_scores.items(), key=lambda x: x[1], reverse=True)][
                       :self.MAX_RESULT]
         self.print_result(result_docs)
+        self.reset()
 
     def get_title(self, doc_id):
         title_file = doc_id // self.MAX_TITLES
@@ -69,7 +70,7 @@ class Search:
         i = 0
         while True:
             line = file.readline()
-            if line is None:
+            if line == "":
                 break
             if i == offset:
                 if str(doc_id) == line[:len(str(doc_id))]:
@@ -147,7 +148,7 @@ class Search:
                         else:
                             posting_list.append("")
                             i += 1
-                            if qtokens[i] == line[:len(qtokens[i])]:
+                            if i < len(qtokens) and qtokens[i] == line[:len(qtokens[i])]:
                                 posting_list.append(line.rstrip("\n").split(" ", 1)[1])
                                 i += 1
                             break
@@ -157,7 +158,7 @@ class Search:
         return posting_list
 
     def print_result(self, result_docs):
-        if result_docs is None:
+        if result_docs == []:
             print("No search results for this query.")
             return
         for doc_id in result_docs:
@@ -171,11 +172,15 @@ if __name__ == '__main__':
 
     search_engine = Search(config_path)
 
-    queries = open(query_path, "r")
-    query_list = queries.readlines()
-    for query in query_list:
-        query = query.rstrip("\n")
-        print("Query: ")
-        print("Results: ")
+    while True:
+        query = input("Q: ")
         search_engine.search(query)
-        print("\n\n\n")
+
+    # queries = open(query_path, "r")
+    # query_list = queries.readlines()
+    # for query in query_list:
+    #     query = query.rstrip("\n")
+    #     print("Query: ")
+    #     print("Results: ")
+    #     search_engine.search(query)
+    #     print("\n\n\n")

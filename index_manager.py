@@ -259,7 +259,7 @@ class Index:
 
             if temp_files[cur_file] is not None:
                 line = temp_files[cur_file].readline()
-                if line is None:
+                if line == '':
                     temp_files[cur_file].close()
                     temp_files[cur_file] = None
                 else:
